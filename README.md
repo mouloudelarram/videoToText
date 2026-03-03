@@ -1,4 +1,4 @@
-# 🎬 YT Transcript Harvester
+# 🎬 VT2 Harvester
 
 > Bulk-fetch transcripts from any YouTube channel or playlist — fast, resilient, and proxy-ready.
 
@@ -26,8 +26,8 @@
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/yourname/yt-transcript-harvester
-cd yt-transcript-harvester
+git clone https://github.com/mouloudelarram/videoToText.git
+cd videoToText
 
 # 2. Install dependencies
 pip install -r requirements.txt
