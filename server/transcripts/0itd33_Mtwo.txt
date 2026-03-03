@@ -1,0 +1,241 @@
+Video ID : 0itd33_Mtwo
+URL      : https://www.youtube.com/watch?v=0itd33_Mtwo
+Language : en
+Fetched  : 2026-03-03 16:06:45
+────────────────────────────────────────────────────────────
+
+In our last video, Mitchell, you showed
+us how to pick the right Cloud Run
+building model and how to estimate costs
+for a new Cloud app that uses Cloud Run.
+>> Yeah, that was fun.
+>> I enjoyed it, too. Uh, what about
+optimizing Cloud Run service that's
+already been deployed?
+>> Let me show you how to do it.
+Welcome to the show, Mitchell. What do
+you do here at Google?
+>> I'm an engineering manager on Cloud Run.
+My team focuses on the cost and
+performance of Cloud Run serving
+infrastructure.
+>> It sounds like you are just the right
+person to ask about cost optimization in
+Cloud Run. So, I've used Cloud Run a lot
+over the years, but to be honest, I
+haven't really dug into the billing.
+Let's say I'm running an application
+that uses Cloud Run. How can I save on
+my cloud bill?
+>> So, here's how I think about it. First,
+you want to prevent billing surprises.
+And second, you want to optimize the
+cost of your running service.
+>> Okay, I've heard from many developers
+who are concerned about the first item
+on your list, uh, billing surprises.
+>> That makes sense. Any system has
+expected traffic where everything will
+work as normal and unexpected traffic
+beyond that.
+>> Okay.
+>> So let's say your system runs on
+traditional servers. You might have a
+web server and a database server. If you
+get more traffic than either of those
+servers can handle, some users will be
+turned away.
+>> Got it. Uh but serverless is a different
+story, right?
+>> Yes. With serverless computing like
+Cloud Run, you can choose what should
+happen when traffic increases. You can
+turn away users like a traditional
+server-based system or you can scale up
+and handle the extra traffic.
+>> In what situations would I want to scale
+up?
+>> Well, let's say you're running an online
+store. Then you don't want to turn
+customers away,
+>> right? I won't say no to more revenue.
+But what if I don't want my system to
+scale up and pay for that scaling?
+>> Well, that's easy. You can set max
+instances to a number like two. That
+means that Cloud Run will prevent your
+service from scaling up beyond two
+instances. If you get more traffic than
+those two instances can handle, users
+will be turned away.
+>> That sounds useful. Is there some way of
+allowing surges in traffic from real
+users, but not from attackers?
+>> Yes, there is, but it requires a little
+more work. You can require requests to
+your Cloudr run service to be
+authenticated. You can use identityware
+proxy, identity platform or firebase
+authentication for that.
+>> Uh but what about if my cloud run
+service supports anonymous users who
+don't log in?
+>> Then you can use Firebase app check.
+Another option is to use cloud armor and
+a load balancer. Cloud Armor is a web
+application firewall. So you can set
+rules for what kind of traffic to allow.
+For example, you can set rate limits so
+one group of clients can't exhaust your
+system resources. You can also use cloud
+armor to stop common attacks like SQL
+injection or cross-side scripting or to
+block bot traffic.
+>> Very good. Now, let's say there's a
+large increase in traffic and in my
+bill, I want to know so I can take
+action.
+>> Yes. And that's where budget alerts come
+in. You can trigger email or pub sub
+alerts when Google predicts that your
+cloud bill will hit a certain dollar
+amount. Or you can set it to trigger if
+your cost will be larger than the
+previous month's bill by a certain
+percentage.
+>> Good stuff. Uh that will help me sleep
+better at night and worry less about
+cost overruns.
+The second item on your list is how to
+optimize the cost for running service.
+So to be honest, the the cloud run cost
+in my web apps is less than 10% of the
+total bill. So I haven't really worried
+about it.
+>> Well, that's true of your application
+and many others, but everybody's
+application is different. We should
+still talk about how to optimize an
+existing Cloudr run service.
+>> Fair enough. How do I do that?
+>> So in the cloud console, go to cloud hub
+and optimization.
+>> And this is a new page, right?
+>> Yeah, it was launched recently. You can
+see a lot of this information in the
+billing section of the console, too. But
+this page is built to help you optimize
+your application. Here you can see the
+trend in total cost over time for all
+products in your project, not just Cloud
+Run. The total is broken down in the
+cost and utilization section down here.
+>> Got it?
+>> So I'll click the link view details and
+cost explorer. And here's a more
+detailed breakdown. Cloud Run services
+cost this customer $370 in the last 30
+days and Cloudr Run jobs cost this
+customer $157.
+Down here we see that the Cloudr run
+cost has increased by 3% while the cloud
+logging cost has dropped by 1%. If there
+are big jumps in these numbers, you
+should investigate. And over here the
+cost trends are broken down further. It
+looks like the service called API drives
+most of the cloudr run cost.
+H I see
+>> I can switch over to this vCPU
+utilization view. This table shows how
+much virtual CPU different Cloudr run
+services are using. The Discordbot
+service is only using 2% of its
+allocated CPU. This customer may be able
+to save some money by allocating fewer
+CPUs to it.
+>> Got it. And the customer is paying for
+memory too, right?
+>> Yes, they are. Let's check the memory
+utilization report. It looks like this
+animated WEBP service is only using half
+a percent of the memory allocated to it.
+The customer could probably save some
+money by allocating less memory to it.
+>> Nice. Uh but you said that the service
+called API is driving most of the cloud
+run bill here.
+>> Yes, it is. Let me click it to get more
+details about that service in
+particular.
+That's a lot of additional data.
+>> Yes, there is. I'll scroll down to the
+charts for CPU and memory utilization.
+The instances don't use a lot of CPU or
+memory, so we should consider raising
+the concurrency limit. That way, each
+instance will take on more requests, and
+you'll need fewer of them, and you will
+pay less. By default, this is set to 80,
+but some services may be able to handle
+even more than that.
+But if I raise the concurrency limit too
+high, won't my system grind it to walt?
+If your workload is CPUbound, it's safe
+to have a fairly high concurrency
+because Cloud Run will start new
+instances if your CPU is working too
+hard. Once you've tuned concurrency, you
+should check that your Cloud Run
+instances have the right amount of
+memory. Let's check the memory
+utilization over on the right. If your
+instances use very little memory,
+consider lowering the memory allocated
+to each instance. That will save you
+money.
+Got it. I guess I want high CPU and high
+memory utilization.
+>> That's right. Finally, aside from
+tuning, there's one more way to save
+money. Compute flexible committed use
+discounts. If you have predictable
+traffic, you can enter into a contract
+with Google that you will use a certain
+amount of processing and you get it at a
+lower price. By the time you watch this
+video, there may be automated
+recommendations in the cloud console for
+this.
+>> So, you'd commit to using a certain
+dollar amounts worth of Cloud Run per
+hour.
+>> Actually, you commit to spend a certain
+amount per hour per region across Cloud
+Run, Compute Engine, or Kubernetes
+Engine. So if you use less of one, you
+can use more of another.
+>> All right, that was a lot of useful
+information. Uh could you recap it for
+us, Mitchell?
+Sure. First, prevent billing surprises
+with max instances, authentication,
+firebased app check or cloud armor. Also
+create budget alerts. Second, use the
+optimization report to find out what
+drives cost and which services have low
+utilization. allocate fewer resources to
+them. Also, don't be afraid to set your
+concurrency limit high and consider
+using committed use discounts.
+>> Very useful. I knew some of this, but
+far from all. Uh, thank you for sharing
+this with us, Mitchell.
+>> Thanks for having me.
+>> And thank you everyone for watching. If
+you have any questions for Mitchell or
+me, please let us know in the comments.
+Also, do let me know what you thought of
+today's episode.
+I read every single comment. Until next
+time.

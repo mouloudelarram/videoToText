@@ -1,0 +1,182 @@
+Video ID : aifIIkQcy4Y
+URL      : https://www.youtube.com/watch?v=aifIIkQcy4Y
+Language : en
+Fetched  : 2026-03-03 16:06:50
+────────────────────────────────────────────────────────────
+
+developers ask me in the YouTube
+comments and on Reddit if they should
+use Cloud Run or not.
+>> What are they concerned about?
+>> Well, if you haven't used Cloud Run
+before, it's hard to tell if it would be
+cost effective for you or not.
+>> Let's have a look.
+>> Welcome to the show, Mitchell. What do
+you do here at Google? I'm an
+engineering manager on cloudr run and my
+team focuses on the cost and performance
+of cloudr run serving infrastructure.
+>> It sounds like you are just the right
+person to ask about billing in cloud
+run. Now I've used cloud run a lot over
+the years but to be honest I haven't
+really dug into the billing. So let's
+say I'm designing a new application and
+I'm considering including cloud run in
+it. How much would I pay if I go ahead?
+Well, every application is different,
+but if you want to get the most out of
+your cloud dollars, it helps to know
+about these two things. First, Cloud
+Run's billing models, and second, how to
+estimate the cost of a new system that
+uses Cloud Run.
+>> Okay, so the first item on your list is
+Cloud Run's billing model. Uh, that's
+pretty simple, isn't it? Uh, I pay for
+the CPU and memory I allocate.
+>> That's right. But if you know a little
+more than that, you can save some money.
+>> I like saving money. Tell me more.
+>> So first of all, there are two billing
+models, request based and
+instance-based. The default one is
+requestbased. You pay for each request
+and for the CPU and memory allocated
+while a request is being processed.
+>> Okay. And the other billing model
+>> there you pay for the entire lifetime of
+your Cloudr run instance regardless of
+whether it's serving a request or not.
+>> All right. Uh let's first talk about the
+default requestbased billing model. I
+pay for when my cloudr run service is
+actually processing a request, right?
+But what about the time between
+requests?
+>> You only pay while requests are being
+processed. In between requests, we
+throttle down the CPU and you don't pay
+anything. That's in addition to Cloud
+Run scaling up on demand and scaling
+down to zero when there are no requests.
+There's also a free tier. You get about
+50 hours per month with the default
+instance size.
+>> So if my Cloud Run service only gets one
+single request per day and it takes 5
+seconds to start up my service, process
+the request, and shut down, I'm only
+build for 5 seconds that entire day,
+even if my service is listening to
+requests 24/7.
+>> That's right. And 5 seconds per day for
+a month is way less than 50 hours. So
+you'd be covered by the free tier. It
+sounds like this building model makes
+Cloud Run cost- effective for systems,
+specifically systems handling low
+traffic, right?
+>> It is. But Cloud Run is also cost-
+effective for systems handling high
+traffic because each instance can handle
+multiple requests at the same time. And
+you get build the same amount for that
+instance regardless of whether it's
+handling a single request or 20
+concurrent requests.
+>> Ah, yes, I have seen that for
+applications I built. Very useful. And
+Cloud Run is also costefficient because
+it's reliable by default. With virtual
+machines, you may want to set up
+multiple instances in multiple regions
+to protect against failures. No need to
+pay for those inactive instances with
+Cloud Run as you only build when they
+actually handle requests.
+>> Oh, right. Uh I shot a video with a
+German bank where they said that the
+cost for some of their systems dropped
+by 90% because of what you just
+mentioned.
+Okay, so the requestbased billing model
+sounds great. Why would I ever want to
+use the instance-based billing model
+where I also have to pay for the time
+between requests?
+>> So, two reasons. Your code may need it
+and it may save you money. Your code may
+need to finish work after returning a
+response to the user. For example, it
+may need to render a PDF after
+responding or you may use a monitoring
+agent like open telemetry that needs to
+run in the background. So it could also
+save money. You said
+>> yes. If you use instancebased billing,
+you pay a lower rate for CPU and memory.
+So if your load is high and steady, you
+may pay less with instancebased billing.
+Also, you don't pay any fee per request.
+How can I tell if my load is high and
+steady enough?
+>> You can do the math, but here's my rule
+of thumb. Instancebased billing will
+save you money if your service is
+processing requests at least 75% of the
+time and idle 25% of the time or less.
+If you have a running service using
+requestbased billing, the cloud console
+will tell you if you'd save money by
+switching to instancebased billing.
+>> And that billing model has a free tier,
+too. Yes, it comes with a free tier of
+about 66 hours of time for the default
+instance type.
+>> That was useful, Mitchell. So, next on
+your list is how to estimate the cost of
+a new system,
+>> right? That's why there's a Google Cloud
+pricing calculator here. I can pick
+Cloud Run.
+I'll pick the US Central 1 region.
+I'll adjust the usage estimates.
+And let's say my service will get 10
+million requests per month. and the
+traffic will have a daily peak and
+trough.
+I'll leave the default billing model
+which is requestbased.
+And there's the cost just under $19 per
+month.
+>> And what happens if you change the
+billing model?
+>> So let me change the billing model to
+instancebased.
+The cost for instancebased billing was
+slightly higher in this case, but it
+depends on your estimated traffic and
+how many instances you think you'll
+need. All right. This will make it
+easier to optimize cost when I'm
+designing a new cloud app using Cloud
+Run. Mitchell, uh, now could you recap
+this for us?
+>> Sure. First, know how Cloud Run builds
+you and which billing model to use.
+Second, use the pricing calculator to
+estimate the cost of a new system.
+>> Very useful. Uh, developers also ask me
+how to optimize an already running Cloud
+Run service. Uh maybe you'd like to come
+back on the show and tell us about that.
+>> I'd be happy to do that, Martin.
+>> Thank you, Mitchell. And thank you
+everyone for watching. If you have any
+questions for Mitchell or me, please let
+us know in the comments. Also, do let me
+know what you thought of today's
+episode. I read every single comment.
+Until next time.

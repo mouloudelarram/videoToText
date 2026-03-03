@@ -1,0 +1,181 @@
+Video ID : LiZcrId6X5E
+URL      : https://www.youtube.com/watch?v=LiZcrId6X5E
+Language : en
+Fetched  : 2026-03-03 16:06:46
+────────────────────────────────────────────────────────────
+
+Hi, I'm Rakkesh, a Infomod customer
+engineer at Google Cloud. I'm joining
+here with Nha who is a database
+specialist CE. Today we are going to
+talk about Spanner and the multimodel
+capabilities that it can offer.
+Building a sophisticated AI application
+often means juggling multiple databases.
+Typically, you might have a relational
+database for your core business data, a
+graph database for information that
+needs to be accessible and relevant, and
+a vector database for semantic search
+usage.
+This creates complex web of data silos
+built on ETL pipelines resulting in
+consistency challenges for developers.
+But what if we can do all this in a
+single unified platform?
+>> And this is where Spanner shines.
+Absolutely. Spanner is built on the
+foundation of pro relability. It
+guarantees strong transactional
+consistency at a global scale. Finine
+availability and effortless horizontal
+scaling makes Spanner a mission critical
+application that can't offer any
+downtime.
+This demonstration we show you how
+Spanner simplifies development by
+consolidating relational graph and
+vector search capabilities into a one
+higherformance database.
+In order to do this, we have built a
+travel agent and our agent needs to help
+a traveler plan a family trip to San
+Francisco. Now, what questions or
+searches do you think you will be
+running if you're planning a trip to San
+Francisco? Few things I can think of are
+help me find top attractions or
+activities or top rated beaches and
+nearby family fun restaurants. Our agent
+is fully equipped with running these
+searches and provide the relevant
+results. Let's dive straight into how we
+built the AI travel agent on Spanner.
+Here is our Spanner console. Spanner
+multimodel is our project and you can
+see our entire database schema in one
+place. We have our standard relational
+tables for attractions and restaurants
+that are holding your structured data.
+We've also defined a knowledge graph
+which is our property graph. So here we
+shift from seeing these isolated data
+points to seeing meaningful
+relationships connecting the where to
+how to ensure a destination isn't just
+nearby but truly accessible and relevant
+through the lens of the user. Finally,
+we have a table containing vector
+embeddings semantic search that powers
+the semantic search. There are no
+separate databases and no complex think
+jobs to manage and no ETL which I call
+it as endless troubleshooting loop.
+Now, let's let's use our AI travel agent
+UI to help the traveler plan her trip.
+We have a little over 10 search queries
+here in this UI that might be of
+interest for a travel planner visiting
+San Francisco. There are diff there are
+different examples and we have
+categorized these as OLTP, OLAP, vector,
+full text search, etc.
+All this is done with a consolidated
+single data model built on Spanner.
+>> We can start with a simple query to find
+top attractions.
+You can see that this is an OLTP
+traditional search and the query return
+retrieves the top rated attractions and
+activities categorized as very good or
+good. And if we hit on run on Spanner,
+it returns a maximum of 10 results.
+On the right side, we have the query
+intelligence powered by Gemini 3 Flash
+that will walk you through the query so
+you can follow the syntax along. Let's
+take another example where maybe the
+tourist is interested in finding the
+best beaches.
+This is also an OOLTP query and it's a
+very simple traditional OLTP query
+keyword search where we're using the
+like operator and we're looking for
+beach. Now, if you misspell a word or a
+synonym, it may or may not pull the
+relevant results correctly.
+>> So, Niha, what can we do here? How can
+we improve the experience?
+>> Excellent question. And that's why we
+have semantic search in Spanner. Let's
+ask the same question but with a
+semantic search query. This query
+retrieves much more records than the
+OLTP as it's able to understand that the
+coastal gem in the description column is
+conceptually related to beach even if we
+don't explicitly use the beach keyword.
+It also puts records like Fort Punston
+which is a beach part of the Golden N
+Gate National Recreation Area. Now let's
+go over the query real quick.
+It takes our question in natural
+language as input. What are the best
+beaches? And it provides the raw text to
+the LLM model. As the output, the model
+returns a vector which the query then
+uses in the cosine distance function to
+rank your chunks of data based on how
+closely their their meaning matches your
+question. It automatically links
+shoreline, coast, and beach without you
+having to manually define a synonym
+list.
+>> Fantastic. Sorry, I'm little more
+ambitious now. What if the request is
+more complex and the traveler find
+familyfriendly
+dining in conveniently located near
+toprated beaches? This request combines
+different data models, isn't it?
+>> I love that question. And let's run our
+crown jewel query to see Spanner's full
+power where the models are completely
+interoperable. The multimodel query. Let
+me go over the query first and then we
+can see this in our application. So the
+question that Rakkesh is asking is show
+me attractions that are family fun or
+conceptually near the beach and count
+the restaurants close to them. So we
+start off with a graph traversal to find
+the restaurants that are close to those
+beach attractions. Then we do a full
+text search that finds literal matches
+for family fun in descriptions. We have
+joins that define our OLTP query. And
+let's move on the semantic search that
+uses vector embeddings to find
+attractions that are semantically
+similar to the phrase beaches. And
+finally, we use an OLAP query to find
+the count of restaurants close to these
+attractions. And that provides
+actionable insights for the user.
+Let's switch back to the application.
+And here are the results. So as we run
+this query, you will start seeing
+results. Um, Spanner seamlessly combines
+all these query types to to give the
+traveler exactly what they're looking
+for. All this in a single call to the
+database.
+As you can see, consolidating your
+architecture onto a single Spanner
+instance removes the complexity of
+managing fragmented data systems.
+It is ideal tool for building modern
+higherformance multimodel AI
+applications.
+Please try spanner today. Thank you.
+>> Thank you.

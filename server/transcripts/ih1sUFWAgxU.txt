@@ -1,0 +1,235 @@
+Video ID : ih1sUFWAgxU
+URL      : https://www.youtube.com/watch?v=ih1sUFWAgxU
+Language : en
+Fetched  : 2026-03-03 16:06:48
+────────────────────────────────────────────────────────────
+
+[music]
+Welcome to another episode of Real Terms
+for AI with Jason and Aza. Aza, so far
+in the series, we've obviously talked a
+lot about generative AI, agents, LLMs,
+and techniques and tools for integrating
+these technologies into applications
+that developers make. But what if in
+this episode we talk about scenarios
+where using generative AI may not be the
+right thing to do? You know, actually
+that isn't exactly on brand, but it
+sounds like a really, really useful
+episode. There's a lot of great use
+cases for AI and generative AI, but
+there's also a lot of times when
+generative AI isn't necessarily the most
+effective approach.
+>> Great points. Let's start though by
+talking about the strengths of
+generative AI.
+>> Okay. I mean, it's right there in the
+name. It generative AI, it generates
+stuff.
+>> That's a very jsonian answer. So, what
+is it actually good for? So, there's
+lots of use cases and we've already
+covered a bunch of them in the series,
+but off the top of my head, it's great
+at things like generating text,
+summarizing documents, generating
+images, writing code, and maybe like
+writing the text for chat bots or other
+user interface type situations.
+>> Those are all great use cases, but I
+think there's probably some more
+interesting ones also.
+>> Like what?
+>> Like tasks that require multi-step
+reasoning, combining data from multiple
+sources in new and novel ways, or even
+using tools like function calling in
+memory. H of course all the agent use
+cases that we've been talking about most
+of our episodes this year those are also
+fantastic use cases of generative AI
+>> that is very true okay so those are some
+of the times where we would absolutely
+want to use generative AI but what about
+times where we may want to use
+traditional AI or machine learning
+instead
+>> so the most obvious answer for that is
+when there's a pre-trained model that
+exists and works for your use case
+>> examples please
+>> ah yes so a really simple one is say
+cloud vision API which can label images
+detect important features in images like
+faces or landmarks and also extract text
+in images using OCR.
+>> That is certainly not a generative case.
+>> Exactly. But a lot of problems and use
+cases that people have aren't actually
+generative and they can be efficiently
+solved with more traditional AI and
+machine learning techniques. Sentiment
+analysis and entity extraction in text
+or speech is another example. And
+traditional AM models are great at that.
+They're trained specifically for tasks
+like these. And I think that's the point
+that we were talking about earlier. When
+there's an existing pre-trained model
+for your task, using that may be the
+most efficient way to address any
+problems that you're trying to solve.
+>> Yeah. Um, another task that people often
+do with AI is clustering or
+classification problems. Basically,
+sorting and labeling things and grouping
+them together based on their
+similarities. For example, in our pet
+shop, we could sort incoming customer
+requests into returns, information
+requests, and billing issues.
+>> That'd be interesting. But what if we
+don't have a pre-trained model that we
+could use to sort our requests for our
+customer service?
+>> Yeah. So with the tools that exist
+today, it's not that hard to train your
+own model. There are frameworks and
+tools to do this for you. But you do
+need training data.
+>> So in this case, we need a set of our
+customer service requests that have
+already happened that are also labeled
+as things like this was a return request
+or a billing request or an information
+request.
+>> Yeah. And if you have that, you can
+train your own classification model. But
+what if I don't have that training data?
+>> So one option is to actually use
+generative AI in that case. It works for
+classification problems. It may not be
+as efficient as a customtrained model
+though. But another option that I think
+is really cool is using generative AI to
+create your training data to generate
+your training data.
+>> Generative AI for generation. I think we
+said that was great for the first uh
+reason to use it, right? Yeah,
+>> that's super cool. All right, let's do
+the third one now though. When do I not
+want to use AI? Oh, so I'll give you my
+snarky answer, which is when an if
+statement or a switch statement or a
+regular expression would work, use that.
+It's just code.
+>> Let's uh let's elaborate that on a
+little bit for everyone.
+>> Okay. Okay. So, if the data for my use
+case is wellformed and regular, perhaps
+it's coming directly out of a database
+or it's coming from another computer
+system and what I want to do is
+relatively simple or straightforward, I
+may not need AI at all.
+>> All right, so let's go through some
+examples here. Okay,
+>> if you need to extract the order number
+from all of the confirmation emails that
+our pet shop sent, you could do that
+with a regular expression because all
+the confirmation emails are in the same
+format.
+>> Or for example, if I need to route phone
+calls to specific extensions and the
+user has already entered the extension,
+I can do that with normal boring code.
+But to recap, because this is a little
+subtle, let's do some examples.
+>> All right, example one, reading emails
+from my boss to see if they are happy or
+unhappy with me. So, I'd probably use
+traditional AI for that. Using existing
+language models that can do sentiment
+analysis. Uh, I'll have another one for
+you. Summarizing those emails from your
+boss so that you can respond to them
+quickly and you understand everything
+that's going on.
+>> Probably a good use case of generative
+AI or doing the really traditional way
+of picking up the phone. But generative
+AI because we're generating a summary.
+>> Yeah.
+>> All right. Since we're on email, how
+would I think about spam detection?
+>> Yeah, that's actually a straightforward
+classification problem and there's
+plenty of training data [laughter] out
+there in the world. So, you can
+accomplish that with AI, traditional
+techniques or machine learning
+techniques. Uh, I've got one about the
+pet shop. How would we find all the
+pictures that our folks have uploaded
+that have cats in them?
+>> Well, that is a classification task. So,
+we could probably do that with
+traditional AI. All right, different
+one. How about responding to people's
+questions about when their cat food will
+arrive at their house?
+>> Okay, so if we wanted to write a nice
+personalized email to people, that would
+be a good use of generative AI and
+because it requires generating some text
+there. But this actually brings up a
+good point. You can combine multiple
+techniques into one agent to address
+your use case.
+>> So we could write the email using
+generative AI, but potentially use plain
+code to figure out, you know, what was
+the appropriate shipping method for the
+order and to use sentiment analysis to
+determine if the user is maybe stressed
+and if we should do something to
+expedite their order for them or not.
+>> Exactly. All of these tools can be
+combined into one agent or one AI
+application. Some tools that an agent
+gets may just be plain code using if
+statements or regular expressions and
+other standard programming stuff we've
+used for decades. Others may use
+traditional AI or machine learning
+techniques like pre-trained models or
+models that they've been trained by the
+company for this use case. And other
+tools in the overall agent may use
+generative AI because they need the
+capabilities of generative models like
+advanced reasoning and the ability to
+generate text. And of course, if you
+want to learn more, I've linked to a
+page that includes detailed examples of
+the different use cases and has a great
+flowchart or decision tree for deciding
+which technique to use. We've also put
+in a couple examples of different
+techniques that you can try yourself if
+you want to explore the different
+options here.
+>> It's all agents and using code and all
+these methods to build great agents,
+right?
+>> Yeah, AI is just code.
+>> It is absolutely that just code. All
+right, with that, this is Aza and Jason
+signing off and wishing you all happy
+prompting. [music]
+Heat. Hey, Heat.
+>> [music]

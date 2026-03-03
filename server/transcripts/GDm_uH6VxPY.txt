@@ -1,0 +1,192 @@
+Video ID : GDm_uH6VxPY
+URL      : https://www.youtube.com/watch?v=GDm_uH6VxPY
+Language : en
+Fetched  : 2026-03-03 16:06:42
+────────────────────────────────────────────────────────────
+
+Hi everyone, welcome to this agentic
+pattern [music] series. So if you
+building with AI, you probably wonder
+how to really design the agentic system.
+Sometimes you need a single agent and
+other times you need a whole team of
+them working together. And today we will
+diving into AI agent design patterns.
+And each pattern we're going to provide
+you with practical example of code. And
+we're also going to walk through a live
+demo. And by the end of this agendic
+pattern series, you will learn how to
+build agentic solution from single agent
+pattern to different multi- aent
+pattern. And for today's episode, we
+will focus on practical examples of
+single agent, sequential agent, and
+parallel agent. For next episode, we're
+gonna cover orchestrator pattern, review
+and critique pattern with loop agent and
+agent as tool. All right, let's dive in.
+So let's begin with the most fundamental
+pattern, the single agent. Imagine you
+want to plan a trip. So with a single
+agent, you want to give it instruction
+on how to use a tool and we can have a
+set of tool like how to check the
+weather, check the traffic and schedule.
+But for our example today, we will
+simplify things with only Google search
+tool. So you will write a comprehensive
+prompt telling the agent how to plan the
+trip using the search tool. So the agent
+then relies on the model's reasoning
+capability to figure out the sequence of
+steps. As you can see from the screen,
+the code for this is very
+straightforward with ADK agent
+development kit. And let's test it with
+ADK web UI by typing ADKVAB. So if I
+type plan a trip to San Francisco, we
+can see in the tracing that agent is
+using the search tool to gather all the
+necessary information in just one go. We
+can see how it is using the tool from
+the tracing tab over here. However, this
+works for single task. But as you have
+more tools, all the tasks are getting
+more complex. For example, if I have a
+request finding a sushi in San Francisco
+that's open late and finding the fattest
+way getting there. So if I build this
+with single agent, we need to define the
+logic in system instruction with this
+massive prom and the behavior can become
+very unreliable. Since AI is
+nondeterministic, you cannot always
+guarantee that you will follow your
+multistep logic perfectly every time. So
+the single agent lack of control if is
+its main weakness with single agent
+pattern. The benefit is it is very
+simple to implement and is great for
+straightforward multi-step tasks.
+However, it is less reliable for complex
+workflow and is harder to control and
+can fill as tasks becoming more complex.
+Now, let's get to our second part of
+this video which is the sequential
+agent. So, with the task we covered
+earlier, how do we adding more control?
+This bring us to our first motion
+pattern. the sequential agent and this
+pattern is for highly structured
+repeatable task because the order of the
+operation is fixed. So the output of one
+sub aent become the direct input for the
+next sub aent. It's like an assembly
+line and for our trip we can break down
+to two specialized agent. So we have
+this first a foot finding agent and the
+second a transportation agent. This
+sequential agent ensures that we always
+run this food finding agent first and
+then this transportation agent next. So
+this gives us predictable reliable
+execution. And you can take a look at
+the screen for this code example of how
+to write it in sequential agent.
+All right, let's try it out in ADK web
+UI.
+And you can look at the tracing tab. You
+can see that it's executed the food
+agent first and then the transportation
+agent next. Perfect. Uh so how do they
+communicate with each other? So they
+share information through this shared
+session state which act like a shared
+scratch pad. You can check the session
+state value at this tab. And once the
+first agent writes its finding and then
+the second agent reads it from it by
+using this curly braces in its system
+prompt. So this is a form of short-term
+memory for your agent system. And the
+advantages of sequential agent is that
+it has high degree of control and
+reliability. It is more predictable than
+a single agent, but it can be very
+inflexible. This rigid predefined
+structure can adapt to dynamic
+situations. Now let's go to the third
+part of this video, the parallel agent.
+So what if some tasks don't need to be
+happen in order? Let's say if I want to
+plan a full trip need to find a good
+museum, find a good concert and then a
+good restaurant. If I doing them in
+sequential order, it will be slow. This
+is where the parallel agent pattern
+really shines. It allows multiple
+specialized agent to run independently
+at the same time. We can have three
+agent museum finder, concert finder,
+restaurant finder, all searching
+concurrently. As you can see, this will
+be a lot faster compared to doing them
+in sequential order. Of course, after
+they all find something, we need to
+bring this results together. So, a
+common approach is combine this with a
+sequential agent. So first we will run
+the search in parallel and then second
+we will run a final aggregator agent to
+synthesize all the results in a single
+trip plan. And here's the agent code on
+how to put together them.
+All right, let's test ADK web UI. After
+we type the question from this tracing
+tab, we can see three searching agents
+kick off all at the same time. So once
+they're done, the results are returned
+to the session state as you can see from
+this tab and then the final summarizing
+agent reset state and generate our plan
+and this logic is defined in the system
+prompt over here. As you can see this is
+a great way to reduce latency for task
+that can be broken down into independent
+subtask. So the benefit of this design
+is very obvious that it significantly
+reduce latency by running tasks at the
+same time. However, it can have higher
+initial cost because it is running
+multiple agents all at once and in a lot
+of use case it requires gather or
+synthesize step to combine the result
+which can add complexity to our design.
+All right, let's recap what we covered
+so far. So we covered the single agent.
+It is simple to implement. It can be
+very flexible but it lacks certain
+control over this whole system. We also
+cover the sequential agent. It add a
+certain level of control and make the
+system more reliable but it is not very
+flexible. And lastly we covered the
+parallel agent. It is fast, efficient
+and great for independent task but it
+can add cost and complexity to your
+system. With those pattern you can
+already build some powerful workflow.
+And in our next video we're going to
+level up with more advanced pattern for
+handling even more complex and dynamic
+problem. We will explore cases with
+different practical examples and the
+pattern we're going to cover next
+episode including uh the loop and
+critique pattern for selfcorrection, the
+coordinator pattern for dynamic routing
+[music] and also the powerful concept of
+using agent as a tool. All right, I will
+see you in [music] next video. Bye.
+>> [music]
