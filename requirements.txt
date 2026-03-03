@@ -1,9 +1,0 @@
-youtube-transcript-api>=0.6.2
-yt-dlp>=2024.1.1
-
-# Optional — only needed for videos with no captions:
-# openai-whisper
-# ffmpeg must also be installed on your system:
-#   Windows : https://ffmpeg.org/download.html  (add to PATH)
-#   macOS   : brew install ffmpeg
-#   Linux   : sudo apt install ffmpeg

@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YT Transcriber</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+
+    :root {
+      --bg:      #0a0a0f;
+      --surf:    #111118;
+      --surf2:   #1a1a24;
+      --border:  #252535;
+      --red:     #ff4455;
+      --red-dim: rgba(255,68,85,0.15);
+      --green:   #00e5a0;
+      --blue:    #4d9fff;
+      --yellow:  #ffcc44;
+      --purple:  #bb86fc;
+      --text:    #e0e0f0;
+      --muted:   #55556a;
+      --mono:    'IBM Plex Mono', monospace;
+      --sans:    'IBM Plex Sans', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; padding-bottom: 80px; }
+
+    /* ── Header ── */
+    header {
+      background: var(--surf); border-bottom: 1px solid var(--border);
+      padding: 16px 36px; display: flex; align-items: center; gap: 14px;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .logo { font-family: var(--mono); font-weight: 700; font-size: 17px; color: var(--red); letter-spacing: -.5px; }
+    .logo span { color: var(--text); }
+    .badge { font-family: var(--mono); font-size: 10px; background: var(--red-dim); color: var(--red); border: 1px solid var(--red); border-radius: 4px; padding: 2px 7px; letter-spacing: 1px; }
+    .srv { margin-left: auto; font-family: var(--mono); font-size: 12px; display: flex; align-items: center; gap: 7px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); transition: all .3s; }
+    .dot.on  { background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .dot.off { background: var(--red);   box-shadow: 0 0 8px var(--red); }
+
+    /* ── Layout ── */
+    .wrap { max-width: 960px; margin: 0 auto; padding: 36px 20px 0; }
+
+    /* ── Tabs ── */
+    .tabs { display: flex; gap: 4px; background: var(--surf); border: 1px solid var(--border); border-radius: 10px; padding: 5px; margin-bottom: 24px; }
+    .tab  { flex: 1; padding: 10px; border: none; background: transparent; color: var(--muted); font-family: var(--mono); font-size: 13px; border-radius: 7px; cursor: pointer; transition: all .2s; }
+    .tab:hover:not(.active) { color: var(--text); background: var(--surf2); }
+    .tab.active { background: var(--red); color: #fff; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* ── Card ── */
+    .card { background: var(--surf); border: 1px solid var(--border); border-radius: 12px; padding: 22px; margin-bottom: 18px; }
+    .card-title { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 14px; }
+
+    /* ── Inputs ── */
+    label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; font-family: var(--mono); }
+    input[type=text], input[type=number], textarea, select {
+      width: 100%; background: var(--surf2); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text); font-family: var(--mono);
+      font-size: 13px; padding: 10px 13px; outline: none; resize: vertical;
+      transition: border-color .2s, box-shadow .2s;
+      appearance: none;
+    }
+    input:focus, textarea:focus, select:focus { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-dim); }
+    textarea { min-height: 110px; line-height: 1.6; }
+    .check-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+    input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--red); cursor: pointer; flex-shrink: 0; }
+    .note { font-size: 12px; color: var(--muted); margin-top: 10px; line-height: 1.6; font-family: var(--mono); }
+    .note b { color: var(--yellow); }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+    @media (max-width: 560px) { .row2 { grid-template-columns: 1fr; } }
+
+    /* ── Button ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--red); color: #fff; border: none; border-radius: 8px;
+      font-family: var(--mono); font-weight: 700; font-size: 13px;
+      padding: 12px 26px; cursor: pointer; margin-top: 16px;
+      transition: all .2s;
+    }
+    .btn:hover:not(:disabled) { background: #ff2233; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(255,68,85,.35); }
+    .btn:disabled { opacity: .4; cursor: not-allowed; transform: none !important; }
+    .btn-sm {
+      background: none; border: 1px solid var(--border); color: var(--muted);
+      font-family: var(--mono); font-size: 10px; border-radius: 4px;
+      padding: 2px 7px; cursor: pointer; transition: all .2s;
+    }
+    .btn-sm:hover { color: var(--text); border-color: var(--muted); }
+
+    /* ── Progress ── */
+    #prog-wrap { display: none; margin-top: 24px; }
+    .prog-bg   { background: var(--surf2); border-radius: 99px; height: 5px; overflow: hidden; margin-bottom: 8px; }
+    .prog-fill { height: 100%; background: linear-gradient(90deg, var(--red), var(--yellow)); border-radius: 99px; width: 0%; transition: width .4s ease; }
+    .prog-lbl  { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+
+    /* ── Output grid ── */
+    #output-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 24px;
+    }
+    @media (max-width: 680px) { #output-grid { grid-template-columns: 1fr; } }
+
+    .panel-box { background: var(--surf); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .panel-box-title {
+      font-family: var(--mono); font-size: 10px; color: var(--muted);
+      letter-spacing: 1.5px; text-transform: uppercase;
+      padding: 10px 14px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .panel-box-body { padding: 10px; max-height: 440px; overflow-y: auto; }
+    .panel-box-body::-webkit-scrollbar { width: 4px; }
+    .panel-box-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+    /* ── Result items ── */
+    .res-item { border-radius: 8px; border: 1px solid var(--border); padding: 10px 12px; margin-bottom: 8px; animation: fadeUp .2s ease; }
+    .res-item.ok  { border-left: 3px solid var(--green); }
+    .res-item.err { border-left: 3px solid var(--red);   }
+    .res-item.act { border-left: 3px solid var(--blue); background: rgba(77,159,255,.05); }
+    .res-title { font-family: var(--mono); font-size: 12px; color: var(--text); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .res-sub   { font-family: var(--mono); font-size: 10px; color: var(--muted); word-break: break-all; }
+    .res-ok    { color: var(--green); }
+    .res-err   { color: var(--red); }
+    .res-act   { color: var(--blue); }
+
+    /* ── Detail log ── */
+    .detail-line { font-family: var(--mono); font-size: 11px; color: var(--muted); padding: 2px 0; line-height: 1.6; border-bottom: 1px solid rgba(255,255,255,.03); white-space: pre-wrap; word-break: break-all; animation: fadeUp .15s ease; }
+    .detail-line.ok    { color: #00c87a; }
+    .detail-line.warn  { color: var(--yellow); }
+    .detail-line.error { color: var(--red); }
+    .detail-line.head  { color: var(--purple); font-weight: 600; margin-top: 6px; }
+    .detail-line.dl    { color: var(--blue); }
+    .run-separator { display: flex; align-items: center; gap: 8px; margin: 12px 0 6px; padding: 0 2px; }
+    .sep-line  { flex: 1; height: 1px; background: var(--border); }
+    .sep-label { font-family: var(--mono); font-size: 10px; color: var(--muted); white-space: nowrap; letter-spacing: .5px; }
+
+    /* ── Summary bar ── */
+    #summary { display: none; margin-top: 16px; background: var(--surf2); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; font-family: var(--mono); font-size: 13px; gap: 20px; align-items: center; flex-wrap: wrap; }
+    .s-ok  { color: var(--green); }
+    .s-err { color: var(--red);   }
+    .s-dir { color: var(--muted); font-size: 11px; word-break: break-all; }
+
+    /* ── Error toast ── */
+    #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: #2a0a0f; border: 1px solid var(--red); color: var(--red); font-family: var(--mono); font-size: 13px; padding: 12px 22px; border-radius: 10px; z-index: 999; transition: transform .3s ease; pointer-events: none; }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+
+    @keyframes fadeUp { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:none; } }
+    @keyframes spin   { to { transform:rotate(360deg); } }
+    @keyframes pulse  { 0%,100%{opacity:1} 50%{opacity:.3} }
+    .spinner { width:13px; height:13px; border:2px solid rgba(255,255,255,.25); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; display:inline-block; }
+    .pulse   { animation: pulse 1.2s ease infinite; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">YT<span>Transcriber</span></div>
+  <div class="badge">v2.1</div>
+  <div class="srv">
+    <div class="dot" id="dot"></div>
+    <span id="srv-lbl" style="color:var(--muted)">checking…</span>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ── Tabs ── -->
+  <div class="tabs" role="tablist">
+    <button type="button" class="tab active" role="tab" aria-selected="true"  onclick="switchTab('channel')">📺 Channel</button>
+    <button type="button" class="tab"         role="tab" aria-selected="false" onclick="switchTab('urls')">🔗 URLs / Playlists</button>
+    <button type="button" class="tab"         role="tab" aria-selected="false" onclick="switchTab('settings')">⚙️ Settings</button>
+  </div>
+
+  <!-- ── Channel tab ── -->
+  <div class="panel active" id="tab-channel" role="tabpanel">
+    <div class="card">
+      <div class="card-title">YouTube Channel</div>
+      <label for="ch-input">Channel name or URL</label>
+      <input type="text" id="ch-input"
+             placeholder="e.g.  MrBeast   or   https://www.youtube.com/@MrBeast"
+             autocomplete="off" spellcheck="false" />
+      <div style="margin-top:14px;">
+        <label for="ch-max">Max videos (0 = all)</label>
+        <input type="number" id="ch-max" value="50" min="0" step="10" style="max-width:140px;" />
+      </div>
+      <p class="note"><b>Tip:</b> Use 0 to transcribe every video on the channel.</p>
+      <button type="button" class="btn" id="btn-ch" onclick="startChannel()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="5 3 19 12 5 21"/></svg>
+        Transcribe Channel
+      </button>
+    </div>
+  </div>
+
+  <!-- ── URLs tab ── -->
+  <div class="panel" id="tab-urls" role="tabpanel">
+    <div class="card">
+      <div class="card-title">Videos &amp; Playlists</div>
+      <label for="url-input">YouTube URLs (one per line — videos, playlists, Shorts)</label>
+      <textarea id="url-input"
+                placeholder="https://www.youtube.com/watch?v=XXXXXXXXXXX&#10;https://www.youtube.com/playlist?list=PLxxxxxxxxx&#10;https://youtu.be/XXXXXXXXXXX"
+                spellcheck="false"></textarea>
+      <button type="button" class="btn" id="btn-url" onclick="startUrls()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="5 3 19 12 5 21"/></svg>
+        Transcribe URLs
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Settings tab ── -->
+  <div class="panel" id="tab-settings" role="tabpanel">
+    <div class="card">
+      <div class="card-title">Output</div>
+      <label for="s-dir">Save directory (server path)</label>
+      <input type="text" id="s-dir" value="transcripts" spellcheck="false"
+             placeholder="transcripts  or  /absolute/path" />
+      <p class="note">Relative paths resolve from the server's working directory.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Language</div>
+      <div class="row2">
+        <div>
+          <label for="s-lang">Preferred language code</label>
+          <input type="text" id="s-lang" value="en" style="max-width:110px;"
+                 placeholder="en" autocomplete="off" />
+          <p class="note"><b>en</b> · ar · fr · es · de · ja · zh · <b>auto</b></p>
+        </div>
+        <div>
+          <div class="check-row" style="margin-top:22px;">
+            <input type="checkbox" id="s-translate" />
+            <label style="margin:0;cursor:pointer;" for="s-translate">Auto-translate to preferred language</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Format</div>
+      <div class="check-row">
+        <input type="checkbox" id="s-ts" />
+        <label style="margin:0;cursor:pointer;" for="s-ts">Include timestamps [MM:SS]</label>
+      </div>
+      <div class="check-row">
+        <input type="checkbox" id="s-force" />
+        <label style="margin:0;cursor:pointer;" for="s-force">Overwrite existing transcript files</label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Progress bar ── -->
+  <div id="prog-wrap">
+    <div class="prog-bg"><div class="prog-fill" id="prog-fill"></div></div>
+    <div class="prog-lbl" id="prog-lbl">Starting…</div>
+  </div>
+
+  <!-- ── Two-column output ── -->
+  <div id="output-grid" style="display:none;">
+
+    <!-- Left: video results -->
+    <div class="panel-box">
+      <div class="panel-box-title">
+        <span>📋</span> Results
+        <span id="res-count" style="margin-left:auto;color:var(--muted);font-size:11px;"></span>
+      </div>
+      <div class="panel-box-body" id="results-list"></div>
+    </div>
+
+    <!-- Right: live detail log -->
+    <div class="panel-box">
+      <div class="panel-box-title">
+        <span class="pulse" id="log-pulse" style="display:none;">🔴</span>
+        <span>🖥 Live Log</span>
+        <button type="button" class="btn-sm" style="margin-left:auto;" onclick="clearLog()">clear</button>
+      </div>
+      <div class="panel-box-body" id="detail-log"></div>
+    </div>
+
+  </div>
+
+  <!-- ── Summary bar ──
+       FIX: was `display:flex` inline which made it always visible on page load;
+       changed to display:none (shown only when job completes via JS).
+  -->
+  <div id="summary" style="display:none;">
+    <span class="s-ok"  id="s-ok">0 saved</span>
+    <span class="s-err" id="s-err">0 failed</span>
+    <span class="s-dir" id="s-dir"></span>
+  </div>
+
+</div><!-- /wrap -->
+
+<!-- Toast notification -->
+<div id="toast" role="alert" aria-live="assertive"></div>
+
+<script>
+'use strict';
+
+// ── Configuration ──────────────────────────────────────────────
+const SERVER = 'http://localhost:5050';
+
+// ── State ─────────────────────────────────────────────────────
+let sse       = null;   // Active EventSource
+let _running  = false;  // Guard against double-submits
+// FIX: store the last-used request body here so the SSE 'done' handler
+// can fall back to body.output_dir if the server doesn't include it
+// (older server versions).  In v2.1+ the server always sends output_dir.
+let _lastBody = null;
+
+// ── Server status polling ──────────────────────────────────────
+async function ping() {
+  try {
+    const r = await fetch(SERVER + '/ping', { signal: AbortSignal.timeout(2500) });
+    if (r.ok) {
+      const d = await r.json().catch(() => ({}));
+      const label = d.active_jobs > 0
+        ? `online · ${d.active_jobs} job${d.active_jobs !== 1 ? 's' : ''} running`
+        : 'server online';
+      setDot('on', label);
+      return true;
+    }
+  } catch (_) { /* fall through */ }
+  setDot('off', 'server offline — run server.py');
+  return false;
+}
+
+function setDot(cls, lbl) {
+  const dot    = document.getElementById('dot');
+  const lbl_el = document.getElementById('srv-lbl');
+  dot.className       = 'dot ' + cls;
+  lbl_el.textContent  = lbl;
+  lbl_el.style.color  = cls === 'on' ? 'var(--green)' : 'var(--red)';
+}
+
+setInterval(ping, 5000);
+ping();
+
+// ── Tab switching ──────────────────────────────────────────────
+function switchTab(name) {
+  const names = ['channel', 'urls', 'settings'];
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    const active = names[i] === name;
+    t.classList.toggle('active', active);
+    t.setAttribute('aria-selected', String(active));
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+// ── Collect settings ───────────────────────────────────────────
+function cfg() {
+  return {
+    output_dir : document.getElementById('s-dir').value.trim()  || 'transcripts',
+    lang       : document.getElementById('s-lang').value.trim() || 'en',
+    timestamps : document.getElementById('s-ts').checked,
+    translate  : document.getElementById('s-translate').checked,
+    force      : document.getElementById('s-force').checked,
+  };
+}
+
+// ── Reset UI between runs ──────────────────────────────────────
+function resetUI() {
+  if (sse) { sse.close(); sse = null; }
+  document.getElementById('results-list').innerHTML  = '';
+  document.getElementById('output-grid').style.display = 'none';
+  document.getElementById('summary').style.display     = 'none';
+  document.getElementById('prog-wrap').style.display   = 'none';
+  document.getElementById('prog-fill').style.width     = '0%';
+  document.getElementById('res-count').textContent     = '';
+  document.getElementById('log-pulse').style.display   = 'none';
+}
+
+function clearLog() {
+  document.getElementById('detail-log').innerHTML = '';
+}
+
+// ── Lock / unlock submit buttons ──────────────────────────────
+const BTN_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="5 3 19 12 5 21"/></svg>';
+function lock(id, lbl)   { const b = document.getElementById(id); b.disabled = true;  b.innerHTML = `<span class="spinner"></span> ${lbl}`; }
+function unlock(id, lbl) { const b = document.getElementById(id); b.disabled = false; b.innerHTML = BTN_ICON + ' ' + lbl; }
+
+// ── Toast notification ─────────────────────────────────────────
+let _toastTimer = null;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 4000);
+}
+
+// ── Start: channel ─────────────────────────────────────────────
+async function startChannel() {
+  if (_running) return;
+  const ch = document.getElementById('ch-input').value.trim();
+  if (!ch) { toast('Please enter a channel name or URL.'); return; }
+  if (!(await ping())) { toast('Server is offline.\n\nRun:  python server.py'); return; }
+
+  _running = true;
+  resetUI();
+  lock('btn-ch', 'Working…');
+
+  const maxV = parseInt(document.getElementById('ch-max').value, 10) || 0;
+  const body = { mode: 'channel', channel: ch, max_videos: maxV, ...cfg() };
+  await runJob(body);
+
+  unlock('btn-ch', 'Transcribe Channel');
+  _running = false;
+}
+
+// ── Start: URLs ────────────────────────────────────────────────
+async function startUrls() {
+  if (_running) return;
+  const raw = document.getElementById('url-input').value.trim();
+  if (!raw) { toast('Please paste at least one YouTube URL.'); return; }
+  if (!(await ping())) { toast('Server is offline.\n\nRun:  python server.py'); return; }
+
+  _running = true;
+  resetUI();
+  lock('btn-url', 'Working…');
+
+  const body = { mode: 'urls', urls: raw, ...cfg() };
+  await runJob(body);
+
+  unlock('btn-url', 'Transcribe URLs');
+  _running = false;
+}
+
+// ── Main job runner (POST → SSE) ───────────────────────────────
+async function runJob(body) {
+  // Save body for the 'done' handler fallback (output_dir)
+  _lastBody = body;
+
+  // Step 1: POST the job, get a job_id
+  let jobId;
+  try {
+    const r = await fetch(SERVER + '/transcribe', {
+      method  : 'POST',
+      headers : { 'Content-Type': 'application/json' },
+      body    : JSON.stringify(body),
+    });
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      // FIX: show rate-limit error prominently
+      if (r.status === 429) {
+        toast('⚠ Server busy — try again in a moment.');
+        addResult('err', '❌', 'Server busy', d.error || 'Too many concurrent jobs');
+      } else {
+        addResult('err', '❌', 'Failed to start job', d.error || `HTTP ${r.status}`);
+      }
+      return;
+    }
+    const d = await r.json();
+    jobId = d.job_id;
+  } catch (e) {
+    addResult('err', '❌', 'Failed to reach server', String(e));
+    return;
+  }
+
+  if (!jobId) {
+    addResult('err', '❌', 'Server did not return a job ID', '');
+    return;
+  }
+
+  // Step 2: Open SSE stream for this job
+  document.getElementById('output-grid').style.display = 'grid';
+  document.getElementById('prog-wrap').style.display   = 'block';
+  document.getElementById('log-pulse').style.display   = 'inline';
+
+  let total    = 0;
+  let done_ok  = 0;
+  let done_err = 0;
+  let activeItem = null;
+
+  await new Promise(resolve => {
+    sse = new EventSource(`${SERVER}/events?job=${encodeURIComponent(jobId)}`);
+
+    sse.onmessage = e => {
+      let msg;
+      try { msg = JSON.parse(e.data); }
+      catch (_) { return; }
+
+      switch (msg.type) {
+
+        case 'start':
+          total = msg.total || 0;
+          addRunSeparator();
+          addDetail('head', `▶ ${msg.text}  (${total} video${total !== 1 ? 's' : ''})`);
+          setProgress(0, total);
+          break;
+
+        case 'video_start':
+          if (activeItem) activeItem.className = activeItem.className.replace('act', '').trim();
+          activeItem = addResult('act', '⏳', `[${msg.index + 1}/${msg.total}] ${msg.id}`, 'Fetching…');
+          setProgress(msg.index, total);
+          addDetail('head', `\n── Video ${msg.index + 1}/${msg.total}: ${msg.id}`);
+          break;
+
+        case 'detail': {
+          const t   = msg.text || '';
+          let   cls = '';
+          if      (t.includes('✔') || t.includes('done') || t.includes('Found'))   cls = 'ok';
+          else if (t.includes('✗') || t.includes('error') || t.includes('Error'))  cls = 'error';
+          else if (t.includes('⬇') || t.includes('%')    || t.includes('ETA'))     cls = 'dl';
+          else if (t.includes('⚠') || t.includes('⛔'))                            cls = 'warn';
+          addDetail(cls, t);
+
+          // Keep the active result card's subtitle live
+          if (activeItem) {
+            const sub = activeItem.querySelector('.res-sub');
+            // FIX: use a simpler trim that doesn't rely on Unicode property escapes
+            // (those require the 'u' flag and certain regex engines may not support them)
+            if (sub) sub.textContent = t.replace(/^\s+/, '').trim().slice(0, 80);
+          }
+          break;
+        }
+
+        case 'ok':
+          done_ok++;
+          if (activeItem) { activeItem.remove(); activeItem = null; }
+          addResult('ok', '✔', msg.title, msg.path);
+          document.getElementById('res-count').textContent = `${done_ok + done_err}/${total}`;
+          setProgress(done_ok + done_err, total);
+          addDetail('ok', `✔ Saved → ${msg.path}`);
+          break;
+
+        case 'err':
+          done_err++;
+          if (activeItem) { activeItem.remove(); activeItem = null; }
+          addResult('err', '✘', msg.title, msg.reason);
+          document.getElementById('res-count').textContent = `${done_ok + done_err}/${total}`;
+          setProgress(done_ok + done_err, total);
+          addDetail('error', `✘ Failed: ${msg.reason}`);
+          break;
+
+        case 'fatal':
+          if (activeItem) { activeItem.remove(); activeItem = null; }
+          addResult('err', '💥', 'Fatal error', msg.text);
+          addDetail('error', `💥 Fatal: ${msg.text}`);
+          break;
+
+        case 'done': {
+          document.getElementById('log-pulse').style.display = 'none';
+          document.getElementById('prog-fill').style.width   = '100%';
+          document.getElementById('prog-lbl').textContent    = 'Complete ✔';
+
+          const sumEl = document.getElementById('summary');
+          sumEl.style.display = 'flex';
+          document.getElementById('s-ok').textContent  = `${msg.ok  ?? done_ok}  saved`;
+          document.getElementById('s-err').textContent = `${msg.err ?? done_err} failed`;
+
+          // FIX: original code referenced `body.output_dir` which was out of
+          // scope inside the Promise callback.  We now use the server-provided
+          // msg.output_dir, falling back to _lastBody.output_dir if absent
+          // (backward compatibility with older server builds).
+          const outDir = msg.output_dir || (_lastBody && _lastBody.output_dir) || '';
+          document.getElementById('s-dir').textContent = outDir ? `→ ${outDir}` : '';
+
+          addDetail('ok', `\n✔ All done — ${msg.ok ?? done_ok} saved, ${msg.err ?? done_err} failed`);
+          sse.close(); sse = null;
+          resolve();
+          break;
+        }
+
+        default:
+          break;
+      }
+    };
+
+    sse.onerror = () => {
+      addDetail('error', '⚠ Connection to server lost.');
+      if (sse) { sse.close(); sse = null; }
+      resolve();
+    };
+  });
+}
+
+// ── UI helpers ─────────────────────────────────────────────────
+function addResult(cls, icon, title, sub) {
+  const box = document.getElementById('results-list');
+  const el  = document.createElement('div');
+  el.className = `res-item ${cls}`;
+
+  const colorClass = cls === 'act' ? 'res-act' : cls === 'ok' ? 'res-ok' : 'res-err';
+  el.innerHTML = `
+    <div class="res-title">${icon} <span class="${colorClass}">${esc(title)}</span></div>
+    <div class="res-sub">${esc(sub || '')}</div>`;
+
+  box.appendChild(el);
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  return el;
+}
+
+function addDetail(cls, text) {
+  const box = document.getElementById('detail-log');
+  const el  = document.createElement('div');
+  el.className   = `detail-line ${cls}`;
+  el.textContent = text;
+  box.appendChild(el);
+  box.scrollTop = box.scrollHeight;
+}
+
+function setProgress(done, total) {
+  const pct = total > 0 ? Math.min(Math.round((done / total) * 100), 100) : 0;
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('prog-lbl').textContent  = total > 0 ? `${done} / ${total} videos` : 'Working…';
+}
+
+function addRunSeparator() {
+  const box = document.getElementById('detail-log');
+  if (!box.children.length) return;   // Skip separator on first run
+  const ts  = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const sep = document.createElement('div');
+  sep.className = 'run-separator';
+  sep.innerHTML = `<span class="sep-line"></span><span class="sep-label">New run — ${ts}</span><span class="sep-line"></span>`;
+  box.appendChild(sep);
+  box.scrollTop = box.scrollHeight;
+}
+
+/** Escape HTML entities to prevent XSS */
+function esc(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+</script>
+</body>
+</html>
