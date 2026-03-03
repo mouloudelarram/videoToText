@@ -553,7 +553,7 @@ input[type=checkbox]{width:14px;height:14px;accent-color:var(--red);cursor:point
 <body>
 
 <header>
-  <div class="logo">YT<span>Transcriber</span></div>
+  <div class="logo">VT<span>2</span></div>
   <div class="badge">WEB</div>
   <div class="srv-bar">
     <div class="srv-item"><div class="dot" id="dot-server"></div><span id="lbl-server">checking…</span></div>
