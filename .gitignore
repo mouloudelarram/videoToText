@@ -1,7 +1,0 @@
-#this is git ignore file
-# ffmpeg directory 
-ffmpeg/
-__pycache__/
-# .env file for environment variables
-.env
-
