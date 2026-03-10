@@ -7,12 +7,13 @@ Run:
 Open http://localhost:5050
 """
 from __future__ import annotations
+import random 
 import json, os, queue, re, sys, threading, time, uuid
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 try:
-    from flask import Flask, Response, jsonify, request
+    from flask import Flask, Response, jsonify, request, send_file
 except ImportError:
     print("Run: pip install flask"); sys.exit(1)
 
@@ -186,7 +187,7 @@ def _new_job():
     jid = str(uuid.uuid4())
     with _jobs_lock:
         _jobs[jid] = {"q": queue.Queue(), "status": "running",
-                      "ok": 0, "err": 0, "total": 0, "outdir": ""}
+                      "ok": 0, "err": 0, "total": 0, "outdir": "", "files": {}}
     return jid
 
 def _push(jid, event):
@@ -211,7 +212,14 @@ def _get_f(jid, key, default=0):
     with _jobs_lock:
         return _jobs.get(jid, {}).get(key, default)
 
-def _finish_job(jid, delay=120):
+def _store_file(jid, vid, path):
+    with _jobs_lock:
+        job = _jobs.get(jid)
+        if job is not None:
+            files = job.setdefault("files", {})
+            files[vid] = str(path)
+
+def _finish_job(jid, delay=3600):
     def _drop():
         time.sleep(delay)
         with _jobs_lock: _jobs.pop(jid, None)
@@ -241,13 +249,17 @@ def _run_transcriptions(jid, video_ids, lang, timestamps, force, out_dir):
         t0 = time.time()
         try:
             text, error = _fetch_transcript(vid_id, lang, timestamps, push_fn)
+            time.sleep(random.uniform(2, 6))  # random delay 2–6s
             elapsed = round(time.time() - t0, 1)
             if text:
                 fp = _unique_path(out_dir, vid_id, force=force)
                 fp.write_text(text, encoding="utf-8")
                 size_kb = round(fp.stat().st_size / 1024, 1)
+                _store_file(jid, vid_id, fp)
+                dl_url = "/download/{}/{}".format(jid, vid_id)
                 _push(jid, {"type": "ok", "id": vid_id, "index": i,
-                            "path": str(fp), "size_kb": size_kb, "elapsed": elapsed})
+                            "path": str(fp), "size_kb": size_kb,
+                            "elapsed": elapsed, "download": dl_url})
                 _log(jid, "  \u2714 Saved \u2192 {}  ({} KB, {}s)".format(fp, size_kb, elapsed), "ok")
                 _inc(jid, "ok")
             else:
@@ -397,605 +409,31 @@ def list_jobs():
                         "outdir": j.get("outdir","")} for jid, j in _jobs.items()}
     return jsonify(result)
 
+@app.route("/download/<jid>/<vid>")
+def download_file(jid, vid):
+    with _jobs_lock:
+        job   = _jobs.get(jid)
+        files = job.get("files") if job else None
+    if not job:
+        return Response("Job not found", status=404, mimetype="text/plain")
+    path = (files or {}).get(vid)
+    if not path:
+        return Response("File not available for this video", status=404, mimetype="text/plain")
+    fp = Path(path).resolve()
+    outdir = Path(job.get("outdir", "") or DEFAULT_OUTDIR).resolve()
+    try:
+        fp.relative_to(outdir)
+    except Exception:
+        return Response("Forbidden", status=403, mimetype="text/plain")
+    if not fp.exists():
+        return Response("File missing", status=404, mimetype="text/plain")
+    return send_file(str(fp), as_attachment=True, download_name=fp.name, mimetype="text/plain")
+
 
 # ── Inline HTML ───────────────────────────────────────────────────────────────
 
-HTML = r"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>VT2</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
-<style>
-:root {
-  --bg:      #0a0a0f;
-  --surf:    #111118;
-  --surf2:   #1a1a24;
-  --border:  #252535;
-  --red:     #ff4455;
-  --red-dim: rgba(255,68,85,.15);
-  --green:   #00e5a0;
-  --blue:    #4d9fff;
-  --yellow:  #ffcc44;
-  --purple:  #bb86fc;
-  --text:    #e0e0f0;
-  --muted:   #55556a;
-  --mono:    'IBM Plex Mono', monospace;
-  --sans:    'IBM Plex Sans', sans-serif;
-}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth}
-body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;padding-bottom:80px}
-
-/* header */
-header{
-  background:var(--surf);border-bottom:1px solid var(--border);
-  padding:14px 32px;display:flex;align-items:center;gap:12px;
-  position:sticky;top:0;z-index:100;backdrop-filter:blur(12px);
-}
-.logo{font-family:var(--mono);font-weight:700;font-size:16px;color:var(--red);letter-spacing:-.5px}
-.logo span{color:var(--text)}
-.badge{font-family:var(--mono);font-size:9px;background:var(--red-dim);color:var(--red);border:1px solid var(--red);border-radius:3px;padding:2px 6px;letter-spacing:1px}
-.srv-bar{margin-left:auto;display:flex;align-items:center;gap:18px}
-.srv-item{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--muted)}
-.dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:all .4s}
-.dot.ok{background:var(--green);box-shadow:0 0 8px var(--green)}
-.dot.err{background:var(--red);box-shadow:0 0 8px var(--red)}
-.dot.warn{background:var(--yellow);box-shadow:0 0 8px var(--yellow)}
-
-/* layout */
-.wrap{max-width:1100px;margin:0 auto;padding:28px 20px 0}
-
-/* tabs */
-.tabs{display:flex;gap:3px;background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:4px;margin-bottom:22px}
-.tab{flex:1;padding:9px 6px;border:none;background:transparent;color:var(--muted);font-family:var(--mono);font-size:12px;border-radius:7px;cursor:pointer;transition:all .2s;white-space:nowrap}
-.tab:hover:not(.active){color:var(--text);background:var(--surf2)}
-.tab.active{background:var(--red);color:#fff}
-.panel{display:none}
-.panel.active{display:block}
-
-/* cards */
-.card{background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px}
-.card-title{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px}
-
-/* inputs */
-label{display:block;font-size:11px;color:var(--muted);margin-bottom:5px;font-family:var(--mono)}
-input[type=text],input[type=number],textarea,select{
-  width:100%;background:var(--surf2);border:1px solid var(--border);
-  border-radius:8px;color:var(--text);font-family:var(--mono);font-size:12px;
-  padding:9px 12px;outline:none;resize:vertical;transition:border-color .2s,box-shadow .2s;
-}
-input:focus,textarea:focus,select:focus{border-color:var(--red);box-shadow:0 0 0 3px var(--red-dim)}
-textarea{min-height:100px;line-height:1.6}
-.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
-.check-row{display:flex;align-items:center;gap:9px;margin-top:8px}
-input[type=checkbox]{width:14px;height:14px;accent-color:var(--red);cursor:pointer;flex-shrink:0}
-.note{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6;font-family:var(--mono)}
-.note b{color:var(--yellow)}
-
-/* buttons */
-.btn{
-  display:inline-flex;align-items:center;gap:7px;
-  background:var(--red);color:#fff;border:none;border-radius:8px;
-  font-family:var(--mono);font-weight:700;font-size:12px;
-  padding:11px 22px;cursor:pointer;margin-top:14px;transition:all .2s;
-}
-.btn:hover:not(:disabled){background:#ff2233;transform:translateY(-1px);box-shadow:0 6px 20px rgba(255,68,85,.4)}
-.btn:disabled{opacity:.35;cursor:not-allowed;transform:none!important}
-.btn-ghost{
-  background:none;border:1px solid var(--border);color:var(--muted);
-  font-family:var(--mono);font-size:10px;border-radius:5px;
-  padding:3px 8px;cursor:pointer;transition:all .2s;
-}
-.btn-ghost:hover{color:var(--text);border-color:var(--muted)}
-
-/* progress */
-#prog-wrap{display:none;margin-top:22px}
-.prog-track{background:var(--surf2);border-radius:99px;height:4px;overflow:hidden;margin-bottom:7px}
-.prog-fill{height:100%;background:linear-gradient(90deg,var(--red),var(--yellow));border-radius:99px;width:0%;transition:width .4s ease}
-.prog-lbl{font-family:var(--mono);font-size:11px;color:var(--muted)}
-
-/* output grid */
-#output-grid{display:none;grid-template-columns:1fr 1fr;gap:14px;margin-top:22px}
-@media(max-width:680px){#output-grid{grid-template-columns:1fr}}
-.pbox{background:var(--surf);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
-.pbox-head{
-  font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1.5px;
-  text-transform:uppercase;padding:9px 13px;border-bottom:1px solid var(--border);
-  display:flex;align-items:center;gap:8px;flex-shrink:0;
-}
-.pbox-body{padding:8px;flex:1;overflow-y:auto;max-height:440px}
-.pbox-body::-webkit-scrollbar{width:3px}
-.pbox-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
-
-/* result items */
-.res{border-radius:7px;border:1px solid var(--border);padding:9px 11px;margin-bottom:7px;animation:fadeUp .2s ease}
-.res.ok {border-left:3px solid var(--green)}
-.res.err{border-left:3px solid var(--red)}
-.res.act{border-left:3px solid var(--blue);background:rgba(77,159,255,.04)}
-.res-title{font-family:var(--mono);font-size:11px;color:var(--text);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.res-sub{font-family:var(--mono);font-size:10px;color:var(--muted);word-break:break-all}
-.c-ok{color:var(--green)} .c-err{color:var(--red)} .c-act{color:var(--blue)} .c-warn{color:var(--yellow)} .c-purple{color:var(--purple)}
-
-/* log lines */
-.ll{font-family:var(--mono);font-size:10.5px;padding:2px 0;line-height:1.65;border-bottom:1px solid rgba(255,255,255,.025);white-space:pre-wrap;word-break:break-all;animation:fadeUp .12s ease}
-.ll.ok{color:#00c87a} .ll.error{color:var(--red)} .ll.warn{color:var(--yellow)}
-.ll.head{color:var(--purple);font-weight:600;padding-top:6px}
-.ll.info{color:#8888aa} .ll.dl{color:var(--blue)}
-
-/* summary */
-#summary{display:none;margin-top:14px;background:var(--surf2);border:1px solid var(--border);border-radius:10px;padding:13px 16px;font-family:var(--mono);font-size:12px;gap:18px;align-items:center;flex-wrap:wrap}
-.s-dir{color:var(--muted);font-size:10px;word-break:break-all;margin-top:3px}
-
-/* server status panel */
-.status-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:16px}
-.stat-card{background:var(--surf2);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
-.stat-label{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
-.stat-val{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--text)}
-.stat-val.ok{color:var(--green)} .stat-val.err{color:var(--red)} .stat-val.warn{color:var(--yellow)}
-
-/* toast */
-#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(80px);
-  background:#200a0e;border:1px solid var(--red);color:var(--red);
-  font-family:var(--mono);font-size:12px;padding:11px 20px;border-radius:9px;
-  z-index:999;transition:transform .3s ease;pointer-events:none;max-width:90vw;text-align:center}
-#toast.show{transform:translateX(-50%) translateY(0)}
-
-@keyframes fadeUp{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
-@keyframes spin{to{transform:rotate(360deg)}}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.spinner{width:11px;height:11px;border:2px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block;flex-shrink:0}
-.blink{animation:pulse 1.4s ease infinite}
-</style>
-</head>
-<body>
-
-<header>
-  <div class="logo">VT<span>2</span></div>
-  <div class="badge">WEB</div>
-  <div class="srv-bar">
-    <div class="srv-item"><div class="dot" id="dot-server"></div><span id="lbl-server">checking…</span></div>
-    <div class="srv-item"><div class="dot" id="dot-ytdlp"></div><span id="lbl-ytdlp">yt-dlp</span></div>
-    <div class="srv-item"><div class="dot" id="dot-api"></div><span id="lbl-api">transcript-api</span></div>
-    <div class="srv-item" style="margin-left:8px"><span id="lbl-jobs" style="color:var(--muted);font-family:var(--mono);font-size:11px">0 jobs</span></div>
-  </div>
-</header>
-
-<div class="wrap">
-
-  <div class="tabs" role="tablist">
-    <button class="tab active" onclick="switchTab('channel')">📺 Channel</button>
-    <button class="tab"        onclick="switchTab('urls')">🔗 URLs / Playlists</button>
-    <button class="tab"        onclick="switchTab('settings')">⚙ Settings</button>
-    <button class="tab"        onclick="switchTab('monitor')">📊 Monitor</button>
-  </div>
-
-  <!-- Channel tab -->
-  <div class="panel active" id="tab-channel">
-    <div class="card">
-      <div class="card-title">YouTube Channel</div>
-      <label for="ch-input">Channel handle or URL</label>
-      <input type="text" id="ch-input" placeholder="@MrBeast  or  https://www.youtube.com/@NASA" autocomplete="off" spellcheck="false"/>
-      <div class="row2" style="margin-top:14px">
-        <div>
-          <label for="ch-max">Max videos <small style="color:var(--muted)">(0 = all)</small></label>
-          <input type="number" id="ch-max" value="0" min="0" step="10"/>
-        </div>
-        <div>
-          <label for="ch-dir">Output directory</label>
-          <input type="text" id="ch-dir" value="transcripts" spellcheck="false"/>
-        </div>
-      </div>
-      <p class="note"><b>Tip:</b> The channel's video list is saved as urls.txt in the output directory before transcribing starts.</p>
-      <button class="btn" id="btn-ch" onclick="startChannel()">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg>
-        Transcribe Channel
-      </button>
-    </div>
-  </div>
-
-  <!-- URLs tab -->
-  <div class="panel" id="tab-urls">
-    <div class="card">
-      <div class="card-title">Videos &amp; Playlists</div>
-      <label for="url-input">YouTube URLs (one per line)</label>
-      <textarea id="url-input" placeholder="https://www.youtube.com/watch?v=XXXXXXXXXXX&#10;https://youtu.be/XXXXXXXXXXX&#10;https://www.youtube.com/playlist?list=PLxxxxxxxxx" spellcheck="false"></textarea>
-      <button class="btn" id="btn-url" onclick="startUrls()">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg>
-        Transcribe URLs
-      </button>
-    </div>
-  </div>
-
-  <!-- Settings tab -->
-  <div class="panel" id="tab-settings">
-    <div class="card">
-      <div class="card-title">Language</div>
-      <div class="row2">
-        <div>
-          <label for="s-lang">Language code</label>
-          <input type="text" id="s-lang" value="en" style="max-width:120px" placeholder="en"/>
-          <p class="note"><b>en</b> · ar · fr · es · de · ja · zh · ru · <b>auto</b></p>
-        </div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-title">Format</div>
-      <div class="check-row">
-        <input type="checkbox" id="s-ts"/>
-        <label style="margin:0;cursor:pointer" for="s-ts">Include [MM:SS] timestamps</label>
-      </div>
-      <div class="check-row">
-        <input type="checkbox" id="s-force"/>
-        <label style="margin:0;cursor:pointer" for="s-force">Overwrite existing files</label>
-      </div>
-    </div>
-  </div>
-
-  <!-- Monitor tab -->
-  <div class="panel" id="tab-monitor">
-    <div class="status-grid" id="status-grid">
-      <div class="stat-card"><div class="stat-label">Server</div><div class="stat-val" id="m-server">—</div></div>
-      <div class="stat-card"><div class="stat-label">yt-dlp</div><div class="stat-val" id="m-ytdlp">—</div></div>
-      <div class="stat-card"><div class="stat-label">transcript-api</div><div class="stat-val" id="m-api">—</div></div>
-      <div class="stat-card"><div class="stat-label">Active Jobs</div><div class="stat-val" id="m-jobs">—</div></div>
-      <div class="stat-card"><div class="stat-label">Output Dir</div><div class="stat-val" style="font-size:11px;word-break:break-all" id="m-outdir">—</div></div>
-    </div>
-    <button class="btn-ghost" onclick="refreshStatus()" style="margin-bottom:12px">↻ Refresh</button>
-    <div class="card" style="padding:0;overflow:hidden">
-      <div class="pbox-head">📋 Active Jobs</div>
-      <div class="pbox-body" id="jobs-list" style="max-height:300px">
-        <div style="padding:16px;color:var(--muted);font-family:var(--mono);font-size:11px">No jobs yet.</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Progress -->
-  <div id="prog-wrap">
-    <div class="prog-track"><div class="prog-fill" id="prog-fill"></div></div>
-    <div class="prog-lbl" id="prog-lbl">Starting…</div>
-  </div>
-
-  <!-- Output grid -->
-  <div id="output-grid">
-    <div class="pbox">
-      <div class="pbox-head">
-        📋 Results
-        <span id="res-count" style="margin-left:auto;font-size:10px"></span>
-      </div>
-      <div class="pbox-body" id="results-list"></div>
-    </div>
-    <div class="pbox">
-      <div class="pbox-head">
-        <span class="blink" id="log-pulse" style="display:none">🔴</span>
-        🖥 Live Log
-        <button class="btn-ghost" style="margin-left:auto" onclick="clearLog()">clear</button>
-      </div>
-      <div class="pbox-body" id="detail-log"></div>
-    </div>
-  </div>
-
-  <!-- Summary -->
-  <div id="summary">
-    <span class="c-ok" id="s-ok">—</span>
-    <span class="c-err" id="s-err">—</span>
-    <div class="s-dir" id="s-dir"></div>
-  </div>
-
-</div><!-- /wrap -->
-
-<div id="toast"></div>
-
-<script>
-// ── State ──────────────────────────────────────────────────────────────────
-let currentJob = null;
-let evtSource  = null;
-let okCount    = 0;
-let errCount   = 0;
-let totalCount = 0;
-const videoMap = {};   // id → DOM element
-
-// ── Tab switching ──────────────────────────────────────────────────────────
-function switchTab(name) {
-  document.querySelectorAll('.tab').forEach((t,i) => {
-    const names = ['channel','urls','settings','monitor'];
-    t.classList.toggle('active', names[i] === name);
-  });
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.getElementById('tab-' + name).classList.add('active');
-  if (name === 'monitor') refreshStatus();
-}
-
-// ── Server status polling ──────────────────────────────────────────────────
-function setDot(id, state, label) {
-  const d = document.getElementById(id);
-  d.className = 'dot ' + state;
-}
-
-async function refreshStatus() {
-  try {
-    const r = await fetch('/ping');
-    const d = await r.json();
-
-    // Header dots
-    setDot('dot-server', 'ok');
-    document.getElementById('lbl-server').textContent = 'online';
-    setDot('dot-ytdlp',  d.yt_dlp ? 'ok' : 'err');
-    document.getElementById('lbl-ytdlp').textContent  = d.yt_dlp ? 'yt-dlp ✔' : 'yt-dlp ✗';
-    setDot('dot-api',    d.status === 'ok' ? 'ok' : 'warn');
-    document.getElementById('lbl-api').textContent    = `api v${d.transcript_api}`;
-    document.getElementById('lbl-jobs').textContent   = `${d.active_jobs} job${d.active_jobs !== 1 ? 's' : ''}`;
-
-    // Monitor tab
-    document.getElementById('m-server').textContent = 'Online';
-    document.getElementById('m-server').className   = 'stat-val ok';
-    document.getElementById('m-ytdlp').textContent  = d.yt_dlp ? 'Installed' : 'Missing';
-    document.getElementById('m-ytdlp').className    = 'stat-val ' + (d.yt_dlp ? 'ok' : 'err');
-    document.getElementById('m-api').textContent    = `v${d.transcript_api}`;
-    document.getElementById('m-api').className      = 'stat-val ' + (d.status === 'ok' ? 'ok' : 'warn');
-    document.getElementById('m-jobs').textContent   = d.active_jobs;
-    document.getElementById('m-jobs').className     = 'stat-val ' + (d.active_jobs > 0 ? 'warn' : 'ok');
-    document.getElementById('m-outdir').textContent = d.output_dir;
-
-    // Jobs list
-    loadJobsList();
-  } catch(e) {
-    setDot('dot-server', 'err');
-    document.getElementById('lbl-server').textContent = 'offline';
-  }
-}
-
-async function loadJobsList() {
-  try {
-    const r = await fetch('/jobs');
-    const jobs = await r.json();
-    const el = document.getElementById('jobs-list');
-    const keys = Object.keys(jobs);
-    if (!keys.length) {
-      el.innerHTML = '<div style="padding:16px;color:var(--muted);font-family:var(--mono);font-size:11px">No jobs yet.</div>';
-      return;
-    }
-    el.innerHTML = keys.map(jid => {
-      const j = jobs[jid];
-      const pct = j.total ? Math.round((j.ok + j.err) / j.total * 100) : 0;
-      const color = j.status === 'done' ? (j.err ? 'c-warn' : 'c-ok') : 'c-act';
-      return `<div style="padding:10px 12px;border-bottom:1px solid var(--border)">
-        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:4px">${jid.slice(0,8)}…</div>
-        <div style="font-family:var(--mono);font-size:12px" class="${color}">
-          ${j.status.toUpperCase()} · ${j.ok}✔ ${j.err}✗ / ${j.total} · ${pct}%
-        </div>
-        ${j.outdir ? `<div style="font-size:10px;color:var(--muted);margin-top:2px">${j.outdir}</div>` : ''}
-      </div>`;
-    }).join('');
-  } catch(e) {}
-}
-
-// Poll status every 5s
-setInterval(refreshStatus, 5000);
-refreshStatus();
-
-// ── Job control ────────────────────────────────────────────────────────────
-function getSettings() {
-  return {
-    lang      : (document.getElementById('s-lang').value || 'en').trim(),
-    timestamps: document.getElementById('s-ts').checked,
-    force     : document.getElementById('s-force').checked,
-  };
-}
-
-function startChannel() {
-  const ch = document.getElementById('ch-input').value.trim();
-  if (!ch) { toast('Enter a channel handle or URL.'); return; }
-  const max = parseInt(document.getElementById('ch-max').value) || 0;
-  const dir = document.getElementById('ch-dir').value.trim() || 'transcripts';
-  const s   = getSettings();
-  startJob({
-    mode       : 'channel',
-    channel    : ch,
-    max_videos : max,
-    output_dir : dir,
-    ...s,
-  }, 'btn-ch');
-}
-
-function startUrls() {
-  const urls = document.getElementById('url-input').value.trim();
-  if (!urls) { toast('Paste at least one YouTube URL.'); return; }
-  const s = getSettings();
-  startJob({
-    mode      : 'urls',
-    urls      : urls,
-    output_dir: 'transcripts',
-    ...s,
-  }, 'btn-url');
-}
-
-async function startJob(body, btnId) {
-  // Reset UI
-  okCount = errCount = totalCount = 0;
-  Object.keys(videoMap).forEach(k => delete videoMap[k]);
-  document.getElementById('results-list').innerHTML = '';
-  document.getElementById('detail-log').innerHTML   = '';
-  document.getElementById('res-count').textContent  = '';
-  document.getElementById('summary').style.display  = 'none';
-  document.getElementById('output-grid').style.display = 'grid';
-  document.getElementById('prog-wrap').style.display   = 'block';
-  document.getElementById('prog-fill').style.width     = '0%';
-  document.getElementById('prog-lbl').textContent      = 'Starting…';
-  document.getElementById('log-pulse').style.display   = 'inline';
-
-  const btn = document.getElementById(btnId);
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Running…';
-
-  if (evtSource) { evtSource.close(); evtSource = null; }
-
-  try {
-    const res = await fetch('/start', {
-      method : 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body   : JSON.stringify(body),
-    });
-    const data = await res.json();
-    if (data.error) { toast(data.error); resetBtn(btn); return; }
-    currentJob = data.job_id;
-    listenToJob(data.job_id, btn);
-  } catch(e) {
-    toast('Could not reach server: ' + e.message);
-    resetBtn(btn);
-  }
-}
-
-function listenToJob(jid, btn) {
-  evtSource = new EventSource(`/events/${jid}`);
-
-  evtSource.onmessage = (e) => {
-    let ev;
-    try { ev = JSON.parse(e.data); } catch { return; }
-    handleEvent(ev);
-  };
-
-  evtSource.onerror = () => {
-    appendLog('⚠ Connection lost — job may still be running.', 'warn');
-    document.getElementById('log-pulse').style.display = 'none';
-    evtSource.close();
-    resetBtn(btn);
-  };
-
-  evtSource.addEventListener('open', () => {
-    appendLog('✔ Connected to server stream.', 'ok');
-  });
-}
-
-function handleEvent(ev) {
-  switch(ev.type) {
-
-    case 'ping': break;
-
-    case 'start':
-      totalCount = ev.total || 0;
-      appendLog(`🚀 ${ev.text}  (${totalCount} video${totalCount!==1?'s':''})`, 'head');
-      updateProgress(0, totalCount);
-      break;
-
-    case 'log':
-      appendLog(ev.text, ev.level || 'info');
-      break;
-
-    case 'video_start':
-      upsertResult(ev.id, ev.url, 'act', `[${ev.index+1}/${ev.total}] Processing…`, '');
-      break;
-
-    case 'progress':
-      updateProgress(ev.done, ev.total);
-      break;
-
-    case 'ok': {
-      const kb = ev.size_kb ? ` · ${ev.size_kb} KB` : '';
-      const t  = ev.elapsed ? ` · ${ev.elapsed}s` : '';
-      upsertResult(ev.id, ev.path, 'ok', ev.path.split(/[\\/]/).pop(), `✔ saved${kb}${t}`);
-      okCount++;
-      updateCount();
-      break;
-    }
-
-    case 'err':
-      upsertResult(ev.id, ev.id, 'err', ev.id, `✗ ${ev.reason}`);
-      errCount++;
-      updateCount();
-      break;
-
-    case 'fatal':
-      appendLog(`💥 FATAL: ${ev.text}`, 'error');
-      toast(ev.text);
-      break;
-
-    case 'done':
-      appendLog(`\n✅ Done — ${ev.ok} saved · ${ev.err} failed`, 'ok');
-      appendLog(`📁 ${ev.outdir}`, 'info');
-      showSummary(ev.ok, ev.err, ev.outdir);
-      updateProgress(totalCount, totalCount);
-      document.getElementById('log-pulse').style.display = 'none';
-      document.querySelectorAll('.btn').forEach(b => {
-        b.disabled = false;
-        if (b.id === 'btn-ch')  b.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg> Transcribe Channel';
-        if (b.id === 'btn-url') b.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg> Transcribe URLs';
-      });
-      if (evtSource) { evtSource.close(); evtSource = null; }
-      refreshStatus();
-      break;
-  }
-}
-
-// ── UI helpers ─────────────────────────────────────────────────────────────
-function updateProgress(done, total) {
-  const pct = total ? Math.round(done / total * 100) : 0;
-  document.getElementById('prog-fill').style.width = pct + '%';
-  document.getElementById('prog-lbl').textContent  =
-    total ? `${done} / ${total} videos  (${pct}%)` : 'Working…';
-}
-
-function updateCount() {
-  document.getElementById('res-count').textContent =
-    `${okCount}✔ ${errCount}✗`;
-}
-
-function upsertResult(id, title, cls, label, sub) {
-  let el = videoMap[id];
-  if (!el) {
-    el = document.createElement('div');
-    el.className = 'res';
-    el.innerHTML = `<div class="res-title"></div><div class="res-sub"></div>`;
-    document.getElementById('results-list').prepend(el);
-    videoMap[id] = el;
-  }
-  el.className = `res ${cls}`;
-  el.querySelector('.res-title').textContent = label;
-  el.querySelector('.res-sub').innerHTML =
-    `<span class="${cls==='ok'?'c-ok':cls==='err'?'c-err':'c-act'}">${sub}</span>`;
-}
-
-function appendLog(text, level='info') {
-  const log = document.getElementById('detail-log');
-  const div = document.createElement('div');
-  div.className = `ll ${level}`;
-  div.textContent = text;
-  log.appendChild(div);
-  log.scrollTop = log.scrollHeight;
-}
-
-function clearLog() {
-  document.getElementById('detail-log').innerHTML = '';
-}
-
-function showSummary(ok, err, dir) {
-  document.getElementById('s-ok').textContent  = `✔ ${ok} saved`;
-  document.getElementById('s-err').textContent = `✗ ${err} failed`;
-  document.getElementById('s-dir').textContent = dir;
-  document.getElementById('summary').style.display = 'flex';
-}
-
-function resetBtn(btn) {
-  if (!btn) return;
-  btn.disabled = false;
-  btn.innerHTML = btn.id === 'btn-ch'
-    ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg> Transcribe Channel'
-    : '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg> Transcribe URLs';
-}
-
-let toastTimer;
-function toast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 4000);
-}
-</script>
-</body>
-</html>"""
+# from index.html
+HTML = open(Path(__file__).parent / "index.html", encoding="utf-8").read()
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
