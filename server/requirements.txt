@@ -1,0 +1,4 @@
+flask
+gunicorn
+youtube-transcript-api
+yt-dlp

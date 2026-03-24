@@ -17,10 +17,13 @@ try:
 except ImportError:
     print("Run: pip install flask"); sys.exit(1)
 
-PORT           = int(os.environ.get("YT_PORT", "5050"))
+PORT           = int(os.environ.get("YT_PORT", "8080"))
 DEFAULT_OUTDIR = Path("transcripts")
 DEFAULT_OUTDIR.mkdir(parents=True, exist_ok=True)
-app = Flask(__name__)
+
+# for AWS Elastic Beanstalk
+# app = Flask(__name__)
+application = Flask(__name__)
 
 _VIDEO_RE      = re.compile(r"(?:v=|youtu\.be/|/embed/|/v/|/shorts/)([A-Za-z0-9_-]{11})")
 _PLAYLIST_RE   = re.compile(r"[?&]list=([A-Za-z0-9_-]+)")
@@ -353,11 +356,11 @@ def _worker_urls(jid, body):
 
 # ── Routes ────────────────────────────────────────────────────────────────────
 
-@app.route("/")
+@application.route("/")
 def index():
     return HTML, 200, {"Content-Type": "text/html; charset=utf-8"}
 
-@app.route("/ping")
+@application.route("/ping")
 def ping():
     ver = _api_version()
     yt_dlp_ok, transcript_ok = False, False
@@ -373,7 +376,7 @@ def ping():
         "active_jobs": active, "output_dir": str(DEFAULT_OUTDIR.resolve()),
     })
 
-@app.route("/start", methods=["POST"])
+@application.route("/start", methods=["POST"])
 def start_job():
     body = request.get_json(force=True, silent=True)
     if not body: return jsonify({"error": "Invalid JSON"}), 400
@@ -384,7 +387,7 @@ def start_job():
     threading.Thread(target=target, args=(jid, body), daemon=True).start()
     return jsonify({"job_id": jid})
 
-@app.route("/events/<jid>")
+@application.route("/events/<jid>")
 def events(jid):
     with _jobs_lock:
         job = _jobs.get(jid)
@@ -401,7 +404,7 @@ def events(jid):
     return Response(generate(), mimetype="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "Connection": "keep-alive"})
 
-@app.route("/jobs")
+@application.route("/jobs")
 def list_jobs():
     with _jobs_lock:
         result = {jid: {"status": j.get("status"), "ok": j.get("ok",0),
@@ -409,7 +412,7 @@ def list_jobs():
                         "outdir": j.get("outdir","")} for jid, j in _jobs.items()}
     return jsonify(result)
 
-@app.route("/download/<jid>/<vid>")
+@application.route("/download/<jid>/<vid>")
 def download_file(jid, vid):
     with _jobs_lock:
         job   = _jobs.get(jid)
@@ -445,4 +448,6 @@ HTML = open(Path(__file__).parent / "index.html", encoding="utf-8").read()
 if __name__ == "__main__":
     print("  VT2  |  http://localhost:" + str(PORT))
     print("  pip install flask youtube-transcript-api yt-dlp")
-    app.run(host="0.0.0.0", port=PORT, debug=False, threaded=True)
+    # application.run(host="0.0.0.0", port=PORT, debug=False, threaded=True)
+    # for AWS Elastic Beanstalk
+    application.run(host="0.0.0.0", port=PORT, debug=False, threaded=True)
