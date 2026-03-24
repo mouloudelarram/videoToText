@@ -16,7 +16,7 @@ python main.py --file urls.txt --output ./out
 # Custom output folder, overwrite existing files
 python main.py 5aOF-RIZS5c --output ~/transcripts --force
 
-
+# for CHannels
 python main.py --channel googlecloudtech
 
 python main.py --channel googlecloudtech --max-videos 10
